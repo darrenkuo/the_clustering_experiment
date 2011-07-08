@@ -1,0 +1,42 @@
+$def with (dataset_form, job_input_form, high_degree_form, lda_scluster_form, scluster_vs_vcluster_form, scluster_vs_vcluster_tfidf_form)
+<head>
+</head>
+<body>
+  <script type="text/javascript">
+  </script>
+  <h1>The Clustering experiment</h1>
+  <form name="clusters" method="POST">
+	<div style="width=50%">
+	  <h2>Create dataset</h2>
+	  $:dataset_form.render()
+	  
+	  <h2>Request a job</h2>
+	  $:job_input_form.render()
+	</div>
+	
+	<div style="float:left">
+	  <h2>Stat request</h2>
+	  
+	  <h2>High Degree Comparison request</h2>
+	  $:high_degree_form.render()
+	  
+	  <h2>LDA vs Scluster analysis</h2>
+	  $:lda_scluster_form.render()
+	  
+	  <h2>Scluster vs Vcluster</h2>
+	  $:scluster_vs_vcluster_form.render()
+
+	  <h2>Scluster vs Vcluster TFIDF</h2>
+	  $:scluster_vs_vcluster_tfidf_form.render()
+	  
+	  <h2>Results</h2>
+	  <a href="http://eecs.berkeley.edu/~darrenk/research/citationnetwork"><h2>Original Citation Network Data</h2></a>
+	  <a href="./scluster"><h2>Scluster results</h2></a>
+	  <a href="./lda"><h2>Lda results</h2></a>
+	</div>
+  </form>
+</body>
+  
+
+
+

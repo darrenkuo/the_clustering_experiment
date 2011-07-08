@@ -1,0 +1,123 @@
+$def with (data_path, names, colors)
+<html>
+  <head>
+	<script type="text/javascript" src="server/static/js/protovis-d3.2.js"></script>
+	<script type="text/javascript" src="server/static/js/$data_path[0]"></script>
+	<script type="text/javascript" src="server/static/js/$data_path[1]"></script>
+	<script type="text/javascript" src="server/static/js/$data_path[2]"></script>
+	<script type="text/javascript" src="server/static/js/$data_path[3]"></script>
+	
+	<style type="text/css">
+	  div#mix{
+	    position:relative;
+	    float : left;
+	    width:70%;
+		height:100%;
+	  }
+	  div#container{
+	    position:relative;
+	    float : left;
+	    height:100%;
+	    width:30%;
+	  }
+	  div#c1{
+	    height:30%;
+	  }
+	  div#c2 {
+	    height:30%;
+	  }
+	  div#common {
+	    height:30%;
+	  }
+	</style>
+		
+  </head>
+
+  <body>
+	<div id="mix">asdfsdaf</div>
+	<div id="container">
+	  <div id="c1">c1</div>
+	  <div id="c2">c2</div>
+	  <div id="common">common</div>
+	</div>
+	
+	<script type="text/javascript+protovis">
+	  function color_func(d) {
+	      var names = $:names;
+	      var colors = $:colors;
+	      for (var i = 0; i < names.length; i ++) {
+              if (d.group == names[i]) 
+			      return colors[i];
+		   }
+		   return "black";
+	  }
+	  function f(d) {
+							  return "RED";
+}
+
+	  function draw(data, div) {
+	  var w = div.width;//(document.body.clientWidth - 40) * 0.7;
+	  var h = div.height;//document.body.clientHeight;
+      
+	  var cur_zoom = 0.0000000000000000000001;
+	  
+	  var vis = new pv.Panel()
+	            .canvas(div)
+	            .width(w)
+	            .height(h)
+	            .fillStyle("white")
+	            .event("mousewheel", pv.Behavior.zoom(5))
+	            .event("mousedown", pv.Behavior.pan())
+	            .event("selectstart", function(a) { alert(a);})
+	            .event("select", function(a) { alert(a);});
+	  
+	  vis.width(w);
+	  vis.height(h);
+	  
+	  pv.Behavior.zoom(10).bound(50);
+	  function zoom_out() 
+	  { 
+	     cur_zoom = cur_zoom / 10.0; 
+	     vis.transform(pv.Transform.identity.scale(cur_zoom).translate((Math.round(w / cur_zoom) - w)/2, (Math.round(h/cur_zoom) - h)/2)); 
+         vis.width(w);
+         vis.height(h);
+         vis.render(); 
+      }; 
+      
+      var force = vis.add(pv.Layout.Force)
+                  .nodes(data.nodes)
+                  .links(data.links)
+                  .bound(true) 	
+                  .chargeConstant(-50)
+                  .chargeMaxDistance(500) 
+                  .springConstant(0.05)
+                  .springLength(0);
+	  
+      force.link.add(pv.Line);
+      
+	  var color = pv.Colors.category10().by(function(d) d.group)
+	  color = pv.Color("RED", 1.0)
+
+      force.node.add(pv.Dot)
+                .size(function(d) (d.linkDegree + 4) * Math.pow(this.scale, -1.5))
+                .fillStyle(color)
+                .strokeStyle(function() this.fillStyle().darker())
+                .lineWidth(1)
+                .title(function(d) d.nodeName)
+                .event("mousedown", pv.Behavior.drag())
+                .event("drag", force)
+                .event("click", function(d) { alert(d.group + ' - ' + d.nodeName);})
+	            .event("load", function(d) { alert(d.group + ' - ' + d.nodeName);})
+	       
+      
+      vis.render();
+      }
+
+	  draw(data, "mix");
+	  draw(data_c1, "c1");
+	  draw(data_c2, "c2");
+	  draw(data_common, "common");
+      
+	</script>
+  </body>
+</html>
