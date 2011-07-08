@@ -59,8 +59,15 @@ map1 = [('PAPERTITLE', PAPERTITLE),
         ('REF', REF),
         ('ABSTRACT', ABSTRACT)]
 
+p_title = None
 
 def parse(line):
+    global p_title
+    if p_title:
+        t = p_title
+        p_title = None
+        return t
+
     for x, y in map1:
         if match(y, line):
             return (x, sub('\n', '', sub(y, '', line)))
@@ -115,6 +122,7 @@ def check_abstract(abstract, keywords):
     return True
 
 def next_paper(f, keywords):
+    global p_title
     m = blank()
     for x in f:
         p = parse(x.strip())
@@ -123,6 +131,7 @@ def next_paper(f, keywords):
             continue;
         
         if p[0] == 'PAPERTITLE':
+            p_title = p[0]
             if m != None:
                 if (not m["ABSTRACT"] or 
                     not check_abstract(m['ABSTRACT'], keywords)):# or 
@@ -176,8 +185,6 @@ def merge_files(output_dir, prefixes, new_prefix):
 
             if pm[i]['INDEX'] != i:
                 print "ERROR! different index"
-            pm[i]['REF'] = pm[i]['ORIGINAL-REF']
-            indexer.addReal(pm[i]['INDEX'])
 
 
         groups = match('Filtered using keywords in ([\s\S]+) with minimum node degree of ([\d]+)',
@@ -190,9 +197,12 @@ def merge_files(output_dir, prefixes, new_prefix):
                 keyword_set.add(k)
 
             min_degree = min(int(groups[1]), min_degree)
-              
-    
-    bidirectional(pm)
+
+    clean_ref(pm)
+    indexer_ref(pm, indexer)
+    for i in pm:
+        pm[i]['REF'] = pm[i]['IN-REF'].union(pm[i]['OUT-REF'])
+
     output_description(list(keyword_set), min_degree, output_dir, new_prefix)
     build_htmls_serializes(new_prefix_dir, prefix, pm)
     build_outputs(new_prefix_dir, prefix, pm, indexer)
@@ -344,6 +354,10 @@ def handle_ref(pm, minimum, indexer):
 def clean_ref(pm):
     for i in pm:
         new_ref = set()
+        pm[i]['OLD-REF'] = set(pm[i]['REF'])
+        if i in pm[i]['OLD-REF']:
+            pm[i]['OLD-REF'].remove(i)
+        
         for r in pm[i]['REF']:
             if r in pm and r != i:
                 new_ref.add(r)

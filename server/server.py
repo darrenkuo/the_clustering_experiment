@@ -172,7 +172,7 @@ class van_graph:
         c1_tag = cell[4]
         c2_tag = cell[5]
         (data_paths, names, colors) = getVanGraphDataPath(prefix1, prefix2, k, l, c1, c2, c1_tag, c2_tag)
-        return render.van_graph(data_paths, names, colors)
+        return render.van_graph(data_paths, names, colors, k)
     
     def POST(self):
         return self.GET()

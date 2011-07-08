@@ -445,7 +445,7 @@ def getSclusterVsVclusterTfidf(prefix, k):
         components.append(form.tr(''))
     
     variables = 'var link = "/van_graph?prefix1=%s&prefix2=%s&k=%s&l=0";\n' % (prefix, prefix, k)
-    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@s@v_tfidf");}\n')
+    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@scluster@vcluster_tfidf");}\n')
 
     return apply(form.Form, components, {'js':js})()
 
@@ -537,7 +537,7 @@ def getSclusterVsVcluster(prefix, k):
         components.append(form.tr(''))
     
     variables = 'var link = "/van_graph?prefix1=%s&prefix2=%s&k=%s&l=%s";\n' % (prefix, prefix, k, 0)
-    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@s@v");}\n')
+    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@scluster@vcluster");}\n')
 
     return apply(form.Form, components, {'js':js})()
 
@@ -663,16 +663,17 @@ def getDegreeComparison(prefix1, prefix2, k, l):
         components.append(form.tr(''))
         
     variables = 'var link = "/van_graph?prefix1=%s&prefix2=%s&k=%s&l=%s";\n' % (prefix1, prefix2, k, l)
-    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@s@s");}\n')
+    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@scluster@scluster");}\n')
 
     return apply(form.Form, components, {'js':js})()
 
 def getClusterAndIndex(prefix, k, tag):
-    if tag == 's':
+    if tag == 'scluster':
         f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, k), 'r')
-    elif tag == 'v':
+    elif tag == 'vcluster':
         f = open('data/%s/%s.mat.clustering.%s' % (prefix, prefix, k), 'r')
     else:
+        print prefix, k, tag
         f = open('data/%s/%s.abstract.matrix.clustering.%s' % (prefix, prefix, k), 'r')
     g = open('data/%s/%s.index' % (prefix, prefix), 'r')
 
@@ -684,17 +685,28 @@ def getClusterAndIndex(prefix, k, tag):
     return zip(indices, clusters)
 
 def convertUnicode(s):
-    return unicodedata.normalize('NFKD', s).encode('ascii','ignore')
+    if type(s) == unicode:
+        return unicodedata.normalize('NFKD', s).encode('ascii','ignore')
+    return s
 
 def getVanGraphDataPath(prefix1, prefix2, k, l, c1, c2, c1_tag, c2_tag):
     data1 = getClusterAndIndex(prefix1, k, c1_tag)
     data2 = getClusterAndIndex(prefix2, k, c2_tag)
 
     cluster_lookup = {}
+    group_lookup = {}
+    prefix_lookup = {}
+    tag_lookup = {}
+    
     ref_lookup = {}
 
-    group1 = '%s %s' % (convertUnicode(prefix1), c1)
-    group2 = '%s %s' % (convertUnicode(prefix2), c2)
+    prefix1 = convertUnicode(prefix1)
+    prefix2 = convertUnicode(prefix2)
+    c1_tag = convertUnicode(c1_tag)
+    c2_tag = convertUnicode(c2_tag)
+
+    group1 = '%s %s %s' % (convertUnicode(prefix1), c1, convertUnicode(c1_tag))
+    group2 = '%s %s %s' % (convertUnicode(prefix2), c2, convertUnicode(c2_tag))
 
     data1 = filter(lambda x: int(x[1]) == int(c1), data1)
     new_data1 = []
@@ -705,7 +717,10 @@ def getVanGraphDataPath(prefix1, prefix2, k, l, c1, c2, c1_tag, c2_tag):
         
         if len(x['REF']) >= int(l):
             new_data1.append(i)
-            cluster_lookup[i] = group1
+            prefix_lookup[i] = prefix1
+            cluster_lookup[i] = c1
+            group_lookup[i] = group1
+            tag_lookup[i] = c1_tag
             ref_lookup[i] = x['REF']
 
     common_cluster = max(c1, c2) + 1
@@ -717,10 +732,14 @@ def getVanGraphDataPath(prefix1, prefix2, k, l, c1, c2, c1_tag, c2_tag):
             new_data2.append(i)
 
             if i in cluster_lookup:
-                cluster_lookup[i] = 'COMMON'
+                group_lookup[i] = 'COMMON'
                 new_data_common.append(i)
             else:
-                cluster_lookup[i] = group2
+                group_lookup[i] = group2
+
+            prefix_lookup[i] = prefix2
+            cluster_lookup[i] = c2
+            tag_lookup[i] = c2_tag
 
             if i not in ref_lookup:
                 f = open('data/%s/serialized/%s.serialize' % (prefix1, i))
@@ -738,19 +757,23 @@ def getVanGraphDataPath(prefix1, prefix2, k, l, c1, c2, c1_tag, c2_tag):
     new_mapping2 = dict(zip(new_data2, range(len(new_data2))))
     new_mapping_common = dict(zip(new_data_common, range(len(new_data_common))))
 
-    results = {'nodes' : [{'nodeName' : i, 'group' : cluster_lookup[i]} for i in nodes],
+    results = {'nodes' : [{'nodeName' : i, 'group' : group_lookup[i], 'cluster' : cluster_lookup[i], 
+                           'id' : i, 'prefix' : prefix_lookup[i], 'tag' : tag_lookup[i]} for i in nodes],
                'links' : []}
 
-    results1 = {'nodes' : [{'nodeName' : i, 'group' : cluster_lookup[i]} for i in new_data1],
+    results1 = {'nodes' : [{'nodeName' : i, 'group' : group_lookup[i], 'cluster' : c1, 
+                            'id' : i, 'prefix' : prefix_lookup[i], 'tag' : tag_lookup[i]} for i in new_data1],
                 'links' : []}
 
-    results2 = {'nodes' : [{'nodeName' : i, 'group' : cluster_lookup[i]} for i in new_data2],
+    results2 = {'nodes' : [{'nodeName' : i, 'group' : group_lookup[i], 
+                            'cluster' : c2, 'id' : i, 'prefix' : prefix_lookup[i], 'tag' : tag_lookup[i]} for i in new_data2],
                 'links' : []}
 
     names = [group1, group2, 'COMMON']
-    colors = ["RED", "BLUE", "GREEN"]
+    colors = ["red", "blue", "green"]
 
-    results_common = {'nodes' : [{'nodeName' : i, 'group' : 'common'} for i in new_data_common],
+    results_common = {'nodes' : [{'nodeName' : i, 'group' : 'common', 'cluster': cluster_lookup[i], 
+                                  'id' : i, 'prefix' : prefix_lookup[i], 'tag' : tag_lookup[i]} for i in new_data_common],
                 'links' : []}
 
     for i in ref_lookup:

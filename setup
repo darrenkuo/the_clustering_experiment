@@ -34,9 +34,16 @@ if __name__ == '__main__':
     """
 
     try:
+        mkdir('data')
+    except:
+        print 'data directory already created'
+
+    # download http://www.eecs.berkeley.edu/~darrenk/all.txt
+
+    try:
         mkdir(join('server', join('static', 'data')))
     except Exception:
-        print 'data directory already created'
+        print 'static data directory already created'
         
     for d in ['scluster', 'vcluster', 'lda', 'vcluster_tfidf']:
         try:

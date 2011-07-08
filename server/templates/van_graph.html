@@ -1,4 +1,4 @@
-$def with (data_path, names, colors)
+$def with (data_path, names, colors, k)
 <html>
   <head>
 	<script type="text/javascript" src="server/static/js/protovis-d3.2.js"></script>
@@ -8,24 +8,39 @@ $def with (data_path, names, colors)
 	<script type="text/javascript" src="server/static/js/$data_path[3]"></script>
 	
 	<style type="text/css">
-	  div#mix{
+	  div#container1 {
 	    position:relative;
-	    float : left;
+	    float :left;
 	    width:70%;
-		height:100%;
+	    height:100%;
 	  }
-	  div#container{
+	  div#mix_tag {
+	    height:3%;
+	  }
+	  div#mix{
+		height:97%;
+	  }
+	  div#container2 {
 	    position:relative;
 	    float : left;
 	    height:100%;
 	    width:30%;
 	  }
+	  div#c1_tag {
+	    height:3%;
+      }
 	  div#c1{
 	    height:30%;
 	  }
+	  div#c2_tag {
+	    height:3%;
+      }
 	  div#c2 {
 	    height:30%;
 	  }
+	  div#common_tag {
+        height:3%
+      }
 	  div#common {
 	    height:30%;
 	  }
@@ -34,27 +49,20 @@ $def with (data_path, names, colors)
   </head>
 
   <body>
-	<div id="mix">asdfsdaf</div>
-	<div id="container">
-	  <div id="c1">c1</div>
-	  <div id="c2">c2</div>
+	<div id="container1">
+	  <div id="mix_tag">Whole graph</div>
+	  <div id="mix"></div>
+	</div>
+	<div id="container2">
+	  <div id="c1_tag">$:names[0] - $:colors[0]</div>
+	  <div id="c1"></div>
+	  <div id="c2_tag">$:names[1] - $:colors[1]</div>
+	  <div id="c2"></div>
+	  <div id="common_tag">$:names[2] - $:colors[2]</div>
 	  <div id="common">common</div>
 	</div>
 	
 	<script type="text/javascript+protovis">
-	  function color_func(d) {
-	      var names = $:names;
-	      var colors = $:colors;
-	      for (var i = 0; i < names.length; i ++) {
-              if (d.group == names[i]) 
-			      return colors[i];
-		   }
-		   return "black";
-	  }
-	  function f(d) {
-							  return "RED";
-}
-
 	  function draw(data, div) {
 	  var w = div.width;//(document.body.clientWidth - 40) * 0.7;
 	  var h = div.height;//document.body.clientHeight;
@@ -93,20 +101,20 @@ $def with (data_path, names, colors)
                   .springConstant(0.05)
                   .springLength(0);
 	  
-      force.link.add(pv.Line);
-      
-	  var color = pv.Colors.category10().by(function(d) d.group)
-	  color = pv.Color("RED", 1.0)
 
+	  var names = $:names,
+		  colors = $:colors;
+
+      force.link.add(pv.Line);
       force.node.add(pv.Dot)
                 .size(function(d) (d.linkDegree + 4) * Math.pow(this.scale, -1.5))
-                .fillStyle(color)
+                .fillStyle(function(d) d.group == names[0] ? colors[0] : (d.group == names[1] ? colors[1] : colors[2]))
                 .strokeStyle(function() this.fillStyle().darker())
                 .lineWidth(1)
                 .title(function(d) d.nodeName)
                 .event("mousedown", pv.Behavior.drag())
                 .event("drag", force)
-                .event("click", function(d) { alert(d.group + ' - ' + d.nodeName);})
+                .event("dblclick", function(d) { window.open('/server/static/data/' + d.tag + '/' + d.prefix + '/' + $:k + '/' + d.cluster + '.html#' + d.id, target='_blank')})
 	            .event("load", function(d) { alert(d.group + ' - ' + d.nodeName);})
 	       
       
