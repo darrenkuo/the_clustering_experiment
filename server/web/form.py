@@ -45,6 +45,8 @@ class Form(object):
             
             if i.is_hidden():
                 out += '    <th></th><td>%s</td>\n' % (html)
+            elif i.has_no_name():
+                out += ' <td>%s</td>\n' % (html)
             else:
                 out += '    <th><label for="%s">%s</label></th><td>%s</td>\n' % (i.id, net.websafe(i.description), html)
         out += "</tr></table>"
@@ -132,6 +134,9 @@ class Input(object):
             attrs['class'] = attrs['class_']
             del attrs['class_']
         
+    def has_no_name(self):
+        return False
+
     def is_hidden(self):
         return False
         
@@ -176,6 +181,9 @@ class Generic(Input):
     def __init__(self, txt, *validators, **attrs):
         self.txt = txt
         Input.__init__(self, str('', *validators, **attrs))
+
+    def has_no_name(self):
+        return True
 
     def render(self):
         return self.txt

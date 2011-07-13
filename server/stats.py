@@ -229,7 +229,8 @@ def handle_high_degree_form(high_degree_form_):
     prefix = high_degree_form_['high-degree-dataset'].value
     l = high_degree_form_['high-degree-l'].value
     k = high_degree_form_['high-degree-k'].value
-    new_prefix = '_'.join(prefix.split('_')[:-1]) + '_' + l
+    #new_prefix = '_'.join(prefix.split('_')[:-1]) + '_' + l
+    new_prefix = prefix + '_' + l
     
     from runcluster import scluster
     from abstractparser import create_outputs1

@@ -18,7 +18,18 @@ def normalize(lst, lnorm):
 def dot(lst1, lst2):
     return sum(map(lambda x: x[0] * x[1], zip(lst1, lst2)))
 
-def generateLdaK(k, prefix, research_path, html_path, data_module, minimum):
+def filterCommonWords(lst):
+    f = open('common_words', 'r')
+    common_words = f.read().strip().split()
+    f.close()
+
+    result = []
+    for w in lst:
+        if w[0] not in common_words:
+            result.append(w)
+    return result
+
+def generateLdaK(k, prefix, research_path, html_path, data_module, minimum, clabel_file):
     serialized_path = join(research_path, 'data', prefix, 'serialized')
     f = open(join(html_path, 'final.gamma'), 'r')
     g = open(join(research_path, join('data', join(prefix, '%s.index' % (prefix)))), 'r')
@@ -35,8 +46,26 @@ def generateLdaK(k, prefix, research_path, html_path, data_module, minimum):
     m = dict([(i, j) for i, j in zip(lst1, lst)])
     n = {}
 
+    #f = open(join(research_path, 'data', prefix, '%s.abstract.matrix.clabel' % (prefix)), 'r')
+    #f = open(join(research_path, 'data', prefix, '%s.abstract.count.clabel' % (prefix)), 'r')
+    f = open(join(research_path, 'data', prefix, '%s.%s' % (prefix, clabel_file)), 'r')
+    words = f.read().strip().split()
+    f.close()
+
+    f = open(join(html_path, 'final.beta'), 'r')
+    data = map(lambda x: zip(words, map(float, x.split())), f.read().strip().split('\n'))
+    f.close()
+    
     for i in range(k):
+        print '%d.html' % (i)
         h = open(join(html_path, '%d.html' % (i)), 'w')
+
+        lst = filterCommonWords(sorted(data[i], key=lambda x: -x[1]))
+
+        h.write('<table border="1">\n')
+        for j in lst[:20]:
+            h.write('<tr><td>%s</td><td>%s</td></tr>\n' % j)
+        h.write('</table>\n')
 
         for y in sorted(m.items(), key=lambda y: -y[1][i]):
             f = open(join(serialized_path, '%s.serialize' % (str(y[0]))), 'r')
@@ -44,7 +73,7 @@ def generateLdaK(k, prefix, research_path, html_path, data_module, minimum):
             f.close()
 
             pm['TOPIC SCORE'] = y[1][i]
-            data_module.build_lda_html(h, pm)
+            data_module.build_lda_html(h, pm, map(lambda x: x[0], lst[:20]))
         h.close()
 
     '''
@@ -137,7 +166,7 @@ def generateClusterK(k, prefix, research_path, html_path, data_module, minimum, 
         print '%s has already been created' % (html_path)
         
     results = {'nodes' : [], 'links' : []}
-
+    
     file_ds = [open(join(html_path, '%s.html' % (i)), 'w') for i in m]
 
     if minimum > 0:
@@ -334,23 +363,32 @@ def filterWithI(prefix1, k, l, infix):
     return results
     
 
+def lda_tfidf(k, prefix, research_path, html_path, paper, minimum):
+    lda(k, prefix, research_path, html_path, paper, minimum, 'abstract.ldain', 'abstract.matrix.clabel')
+
+def lda_word_count(k, prefix, research_path, html_path, paper, minimum):
+    lda(k, prefix, research_path, html_path, paper, minimum, 'abstract.count', 'abstract.count.clabel')
+
 # TODO: fix global variables
-def lda(k, prefix, research_path, html_path, paper, minimum):
+def lda(k, prefix, research_path, html_path, paper, minimum, lda_input, clabel_input):
     f = open(join(research_path, 'data/%s/%s.out.lda.%d.output' % (prefix, prefix, k)), 'w')
     command = [join(research_path, 'lib/lda-c-dist/lda'),
                'est', str(1), str(k), 
                join(research_path, 'lib/lda-c-dist/settings.txt'),
-               join(research_path, 'data/%s/%s.abstract.ldain' % (prefix, prefix)),
+               #join(research_path, 'data/%s/%s.abstract.matrix' % (prefix, prefix)),
+               #join(research_path, 'data/%s/%s.abstract.count' % (prefix, prefix)),
+               join(research_path, 'data/%s/%s.%s' % (prefix, prefix, lda_input)),
                'random', html_path]#'lda/%s/results-%s' % (prefix, k)]
     print ' '.join(command)
     proc = Popen(command, stdout=f)
-    proc.communicate()
+    o = proc.communicate()
     print 'retcode',  proc.wait()
+    print 'output', o
     f.close()
 
     if html_path:
         chmod(html_path, 0755)
-        generateLdaK(k, prefix, research_path, html_path, paper, minimum)
+        generateLdaK(k, prefix, research_path, html_path, paper, minimum, clabel_input)
 
 def vcluster(k, prefix, research_path, html_path, paper, minimum):
     f = open(join(research_path, 'data/%s/%s.mat.clustering.%d.output' %

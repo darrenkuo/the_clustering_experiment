@@ -8,6 +8,7 @@ from optparse import OptionParser
 from os import mkdir
 from os import system
 from os.path import abspath
+from os.path import exists
 from os.path import join
 from shutil import copyfile
 from shutil import copytree
@@ -40,12 +41,17 @@ if __name__ == '__main__':
 
     # download http://www.eecs.berkeley.edu/~darrenk/all.txt
 
+    if not exists(join('data', 'data.serialize')):
+        f = open(join('data', 'data.serialize'), 'w')
+        f.write(str({}))
+        f.close()
+
     try:
         mkdir(join('server', join('static', 'data')))
     except Exception:
         print 'static data directory already created'
         
-    for d in ['scluster', 'vcluster', 'lda', 'vcluster_tfidf']:
+    for d in ['scluster', 'vcluster', 'lda_tfidf', 'vcluster_tfidf', 'lda_word_count']:
         try:
             mkdir(join('server', join('static', join('data', d))))
         except Exception:

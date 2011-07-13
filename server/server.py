@@ -28,8 +28,10 @@ web.config.debug = True
 
 urls = ('/', 'main', 
         '/scluster', 'scluster', 
-        '/lda', 'lda', 
+        '/lda_tfidf', 'lda_tfidf', 
+        '/lda_word_count', 'lda_word_count',
         '/scluster_results', 'scluster_results',
+        '/lda_results', 'lda_results',
         '/degree_compare', 'degree_compare',
         '/lda_scluster', 'lda_scluster',
         '/van_graph', 'van_graph',
@@ -94,12 +96,19 @@ class scluster:
     def POST(self):
         return render.scluster(getSclusterForm())
 
-class lda:
+class lda_tfidf:
     def GET(self):
-        return render.lda(getLdaForm())
+        return render.lda(getLdaForm('tfidf'))
 
     def POST(self):
-        return render.lda(getLdaForm())
+        return render.lda(getLdaForm('tfidf'))
+
+class lda_word_count:
+    def GET(self):
+        return render.lda(getLdaForm('word_count'))
+
+    def POST(self):
+        return render.lda(getLdaForm('word_count'))
 
 class scluster_results:
     def GET(self):
@@ -110,6 +119,19 @@ class scluster_results:
             f2, getSclusterResultForm('server/static/data/scluster/%s/%s/' % 
                                       (f1, f2)),
             '%s-results-%s-S.js' % (f1, f2), False)
+
+    def POST(self):
+        return None
+
+class lda_results:
+    def GET(self):
+        user_data = web.input()
+        t = user_data.r.split('-')
+        (f1, f2) = (t[0], t[1])
+        p = user_data.p
+        return render.lda_results(
+            f2, getLdaResultForm('server/static/data/lda_%s/%s/%s/' % 
+                                      (p, f1, f2)))
 
     def POST(self):
         return None

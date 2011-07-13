@@ -10,7 +10,7 @@
 #
 
 use Getopt::Long;
-use Pod::Usage;
+#use Pod::Usage;
 
 #use Pod::Html;
 #pod2html("doc2mat", "--outfile=doc2mat.html");
@@ -94,8 +94,10 @@ $clabelfile  = '';
 
 GetOptions('skipnumeric' => \$skipnumeric, 'tokfile' => \$tokfile, 'nostem' => \$nostem,, 'nostop' => \$nostop, 'mystoplist=s' => \$mystoplist, 'minwlen=i' => \$minwlen, 'nlskip=i' => \$nlskip, 'help|?' => \$help);
 
-pod2usage(-verbose => 2) if $help;
-pod2usage(-verbose => 2) if $#ARGV != 1;
+#pod2usage(-verbose => 2) if $help;
+#pod2usage(-verbose => 2) if $#ARGV != 1;
+die "need help?" if $help;
+die "two inputs please" if $#ARGV != 1;
 
 $docfile       = $ARGV[0];
 $matfile       = $ARGV[1];

@@ -16,13 +16,19 @@ class Indexer:
     def __init__(self):
         self.realToNew = {}
         self.newToReal = {}
+        self.reals = []
         self.new = 1
 
     def addReal(self, real):
-        id = self.new
-        self.realToNew[real] = id
-        self.newToReal[id] = real
-        self.new += 1
+        if real not in self.realToNew:
+            id = self.new
+            self.realToNew[real] = id
+            self.newToReal[id] = real
+            self.new += 1
+            self.reals.append(real)
+            return id
+        else:
+            return self.getNew(real)
 
     def getNew(self, real):
         if real in self.realToNew:
@@ -122,7 +128,6 @@ def check_abstract(abstract, keywords):
     return True
 
 def next_paper(f, keywords):
-    global p_title
     m = blank()
     for x in f:
         p = parse(x.strip())
@@ -131,16 +136,15 @@ def next_paper(f, keywords):
             continue;
         
         if p[0] == 'PAPERTITLE':
-            p_title = p[0]
             if m != None:
                 if (not m["ABSTRACT"] or 
                     not check_abstract(m['ABSTRACT'], keywords)):# or 
                     #not (len(m['REF']) >= minimum)):
                     continue
 
-                return m
+                yield m
             m = blank()
-
+        
         if p[0] == 'REF':
             m['REF'].add(p[1])
         else:
@@ -149,9 +153,9 @@ def next_paper(f, keywords):
     if (m["ABSTRACT"] and
         check_abstract(m['ABSTRACT'], keywords)):# and
         #(len(m['REF']) >= minimum)):
-        return m
+        yield m
 
-    return None
+    yield None
 
 #TODO: fix global variables
 #TODO: make new prefix directory
@@ -173,7 +177,7 @@ def merge_files(output_dir, prefixes, new_prefix):
     min_degree = 1e300
         
     for p in prefixes:
-        cur_dir = join(output_dir, prefixes)
+        cur_dir = join(output_dir, p)
         f = open(join(cur_dir, '%s.index' % (p)), 'r')
         indices = f.read().split()
         f.close()
@@ -203,9 +207,9 @@ def merge_files(output_dir, prefixes, new_prefix):
     for i in pm:
         pm[i]['REF'] = pm[i]['IN-REF'].union(pm[i]['OUT-REF'])
 
-    output_description(list(keyword_set), min_degree, output_dir, new_prefix)
-    build_htmls_serializes(new_prefix_dir, prefix, pm)
-    build_outputs(new_prefix_dir, prefix, pm, indexer)
+    output_description(list(keyword_set), min_degree, new_prefix_dir, new_prefix)
+    build_htmls_serializes(new_prefix_dir, new_prefix, pm)
+    build_outputs(new_prefix_dir, new_prefix, pm, indexer)
 
 def output_description(keywords, degree, output_dir, prefix):
     description = 'Filtered using keywords in %s with minimum node degree of %d' % (str(keywords), degree)
@@ -225,12 +229,36 @@ def bidirectional(pm):
         pm[index]['REF'] = set(filter(lambda r: (r in pm and r != index), pm[index]['REF']))
         map(lambda r: pm[r]['REF'].add(index), pm[index]['REF'])
 
+def build_abstract_count(output_directory, prefix, pm):
+    f = open(join(output_directory, '%s.abstract.count' % (prefix)), 'w')
+    indexer = Indexer()
+    
+    for i in pm:
+        m = {}
+        for w in pm[i]['ABSTRACT'].strip().split():
+            id = indexer.addReal(w)
+            if id not in m:
+                m[id] = 0
+            m[id] += 1
+        f.write('%d ' % (len(m)))
+        for j in m:
+            f.write('%s:%s ' % (j, m[j]))
+        f.write('\n')
+    f.close()        
+
+    f = open(join(output_directory, '%s.abstract.count.clabel' % (prefix)), 'w')
+    for i in indexer.reals:
+        f.write('%s\n' % (i))
+    f.close()        
+
 def build_outputs(output_directory, prefix, pm, indexer):
     
     f = open(join(output_directory, "%s.out" % (prefix)), 'w')
     g = open(join(output_directory, "%s.index" % (prefix)), 'w')
     a = open(join(output_directory, "%s.abstract" % (prefix)), 'w')
     b = open(join(output_directory, "%s.mat" % (prefix)), 'w')
+
+    build_abstract_count(output_directory, prefix, pm)
 
     total_edge = 0
     for i in pm:
@@ -330,7 +358,7 @@ def create_outputs1(main_prefix, data_dir, new_prefix, minimum):
     tf.close()
 
     f = open('data/%s/%s.abstract.matrix' % (new_prefix, new_prefix), 'r')
-    g = open('data/%s/%s.abstract.ldain' % (new_prefix, new_prefix), 'w')
+    g = open('data/%s/%s.abstract.matrix.ldain' % (new_prefix, new_prefix), 'w')
     proc = Popen(['lib/doc2mat-1.0/matToLdaIn.py'], stdin=f, stdout=g)
     proc.communicate()
     retcode = proc.wait()
@@ -377,11 +405,12 @@ def create_outputs(main_filename, keywords, data_dir, prefix):
     f = open(main_filename, 'r')
     indexer = Indexer()
     pm = {}
-    m = next_paper(f, keywords)
+    paper_gen = next_paper(f, keywords)
 
+    m = paper_gen.next()
     while m:
         pm[m['INDEX']] = m
-        m = next_paper(f, keywords)
+        m = paper_gen.next()
 
     clean_ref(pm)
     indexer_ref(pm, indexer)
@@ -405,7 +434,7 @@ def create_outputs(main_filename, keywords, data_dir, prefix):
     retcode = proc.wait()
 
     f = open('data/%s/%s.abstract.matrix' % (prefix, prefix), 'r')
-    g = open('data/%s/%s.abstract.ldain' % (prefix, prefix), 'w')
+    g = open('data/%s/%s.abstract.matrix.ldain' % (prefix, prefix), 'w')
     proc = Popen(['lib/doc2mat-1.0/matToLdaIn.py'], stdin=f, stdout=g)
     proc.communicate()
     retcode = proc.wait()
