@@ -30,9 +30,9 @@ def getDatasetForm():
     components = [form.Textarea('keywords', description='Filter by keywords:',
                                 style='resize: none;', cols='50', rows='2'),
                   form.tr(""),
-                  #form.Textbox('prefix', style='resize: none;', size='50', 
-                  #             description='Name for the dataset'),
-                  #form.tr(""),
+                  form.Textbox('prefix', style='resize: none;', size='50', 
+                               description='Name for the dataset'),
+                  form.tr(""),
                   form.Button(create_button_txt, 'submit', 
                               description='Create a new dataset', 
                               value='submit!'),
@@ -42,9 +42,9 @@ def getDatasetForm():
                                     getDatasetInfo().items()), 
                                 description='dataset:'),
                   form.tr(""),
-                  #form.Textbox('new_prefix', size='50',
-                  #             description='Name for the new prefix'),
-                  #form.tr(""),
+                  form.Textbox('new_prefix', size='50',
+                               description='Name for the new prefix'),
+                  form.tr(""),
                   form.Textbox('threshold', value='0', 
                                style='resize: none;', 
                                size='5', row='1', 
@@ -64,7 +64,11 @@ def getDatasetForm():
 
     if new_components:
         components.extend(new_components)
-        components.extend([form.Button(merge_button_txt, 'submit', 
+        
+        components.extend([form.Textbox('merge_prefix', size='50',
+                                        description='Name for the new prefix'),
+                           form.tr(''),
+                           form.Button(merge_button_txt, 'submit', 
                                        description='Submit merge request', 
                                        value='submit!'),
                            form.tr("")])
@@ -108,6 +112,13 @@ def getSclusterResultForm(folder):
         components.append(form.Link(i, link=join(folder, i), 
                                     value='cluster data'))
     return apply(form.Form, components)()
+
+def getVclusterResultForm(folder):
+    components = []
+    for i in walk(folder).next()[2]:
+        components.append(form.Link(i, link=join(folder, i), 
+                                    value='cluster data'))
+    return apply(form.Form, components)()
                    
 
 def getSclusterForm():
@@ -116,6 +127,19 @@ def getSclusterForm():
     for x in walk(cluster_path).next()[1]:
         links = map(lambda y: form.Link('k = %s' % (y), 
                                         link='/scluster_results?r=%s' % (
+                    '%s-%s' % (x, y)),
+                                        value='cluster data'),
+                    walk(join(cluster_path, x)).next()[1])
+        results.append((x, apply(form.Form, links)()))
+
+    return results
+
+def getVclusterForm():
+    cluster_path = 'server/static/data/vcluster/'
+    results = []
+    for x in walk(cluster_path).next()[1]:
+        links = map(lambda y: form.Link('k = %s' % (y), 
+                                        link='/vcluster_results?r=%s' % (
                     '%s-%s' % (x, y)),
                                         value='cluster data'),
                     walk(join(cluster_path, x)).next()[1])
@@ -241,8 +265,25 @@ def getSclusterVsVclusterTfidfForm():
                               description="Submit Scluster and Vcluster TFIDF comparison request", 
                               value='submit!'),
                   form.tr('')]
-    return apply(form.Form, components)()   
+    return apply(form.Form, components)()
 
+merge_comparison_button_txt = 'Get Merge Comparison'
+def getMergeComparisonForm():
+    components = [form.Dropdown('merge-dataset', 
+                                map(lambda x: (x[0], x[0] + ' - ' + x[1]), 
+                                           getDatasetInfo().items()),
+                                description="Dataset:"),
+                  form.tr(''),
+                  form.Textbox('merge-k', size='10', 
+                               description='Number of clusters:'),
+                  form.tr(''),
+                  form.Button(merge_comparison_button_txt, 'submit', 
+                              description="Submit Scluster and Vcluster TFIDF comparison request", 
+                              value='submit!'),
+                  form.tr('')]
+
+    return apply(form.Form, components)()
+    
 # form handlers
 def handle_dataset_form(dataset_form_):
     keywords = dataset_form_['keywords'].value
@@ -251,7 +292,7 @@ def handle_dataset_form(dataset_form_):
     if 'submit!' == dataset_form_[create_button_txt].value:
         print 'creating!'
         keywords = keywords.split()
-        prefix = '_'.join(keywords) + '_0'
+        prefix = dataset_form_['prefix'].value
         
         print 'before starting thread:', threading.enumerate()
         t = Thread(target=getThreadForCreateOutput(keywords, prefix, 
@@ -262,16 +303,17 @@ def handle_dataset_form(dataset_form_):
     elif 'submit!' == dataset_form_[shrink_button_txt].value:
         print 'shrinking!!'
         dataset = dataset_form_['degree_dataset'].value
-        #new_prefix = dataset_form_['new_prefix'].value
-        new_prefix = dataset + '_' + dataset_form_['threshold'].value
+        new_prefix = dataset_form_['new_prefix'].value
+        #new_prefix = dataset + '_' + dataset_form_['threshold'].value
         threshold = int(dataset_form_['threshold'].value)
         
         create_outputs1(dataset, 'data', new_prefix, threshold)
     elif 'submit!' == dataset_form_[merge_button_txt].value:
         print 'merging!!'
         lst = check_checkboxes(dataset_form_)
+        merge_prefix = dataset_form_['merge_prefix'].value
         from abstractparser import merge_files
-        merge_files('data', lst, combinePrefix(lst))
+        merge_files('data', lst, merge_prefix)
         
     '''
     lst = check_checkboxes():
@@ -282,6 +324,16 @@ def handle_dataset_form(dataset_form_):
     '''
 
 def combinePrefix(lst):
+    f = open('data/data.serialize', 'r')
+    m = eval(f.read())
+    f.close()
+
+    keywords = set()
+    for p in lst:
+        groups = match('Filtered using keywords in ([\s\S]+) with minimum node degree of ([\d]+)',
+                       m[p])
+        keywords.union(eval(groups[0]))
+
     keywords = set()
     for i in lst:
         for j in i.split('_'):
@@ -364,8 +416,10 @@ def check_checkboxes(dataset_form_):
             lst.append(i)
     return lst
 
-def run_prog(prog, k, prefix, html_path, paper):
+def run_prog(prog, k, prefix, html_path, paper, callback=None):
     def run():
         print 'k is', k
         prog(int(k), prefix, '.', html_path, paper, 0)
+        if callback:
+            callback(prefix, int(k))
     return run

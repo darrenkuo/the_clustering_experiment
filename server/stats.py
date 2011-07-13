@@ -20,11 +20,11 @@ def getLdaSclusterResultForm(prefix, lda_k, scluster_k):
                        f.read().split('\n')[:-1])
     f.close()
     
-    f = open('data/%s/%s.index' % (prefix, prefix), 'r')
+    f = open('data/%s/data.index' % (prefix), 'r')
     indices = f.read().split()
     f.close()
     
-    f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, scluster_k), 
+    f = open('data/%s/data.out.clustering.%s' % (prefix, scluster_k), 
              'r')
     clusters = map(int, f.read().split())
     f.close()
@@ -192,6 +192,17 @@ def make_html_path(prog, prefix, k):
 
     return html_path
 
+
+def handle_merge_comparison_form(merge_comparison_form_):
+    prefix = merge_comparison_form_['merge-dataset'].value
+    k = merge_comparison_form_['merge-k'].value
+
+    html_path = make_html_path('scluster', prefix, k)
+    scluster(int(k), prefix, '.', html_path, paper, 0)
+
+    
+
+
 def handle_scluster_vs_vcluster_tfidf_form(scluster_vs_vcluster_tfidf_form_):
     prefix = scluster_vs_vcluster_tfidf_form_['sv-tfidf-dataset'].value
     k = scluster_vs_vcluster_tfidf_form_['sv-tfidf-k'].value
@@ -297,8 +308,8 @@ def getSclusterVsVclusterTfidf(prefix, k):
     from runcluster import filterWithI
     results = filterWithI(prefix, k, 0, 'abstract.matrix')
 
-    f = open('data/%s/%s.out.clustering.%s.output' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.abstract.matrix.clustering.%s.output' % (prefix, prefix, k), 'r')
+    f = open('data/%s/data.out.clustering.%s.output' % (prefix, k), 'r')
+    g = open('data/%s/data.abstract.matrix.clustering.%s.output' % (prefix, k), 'r')
 
     s_stats = f.read().split('\n')
     v_stats = g.read().split('\n')
@@ -309,8 +320,8 @@ def getSclusterVsVclusterTfidf(prefix, k):
     f.close()
     g.close()
 
-    f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.abstract.matrix.clustering.%s' % (prefix, prefix, k), 'r')
+    f = open('data/%s/data.out.clustering.%s' % (prefix, k), 'r')
+    g = open('data/%s/data.abstract.matrix.clustering.%s' % (prefix, k), 'r')
 
     clusters1 = f.read().split()
     clusters2 = g.read().split()
@@ -450,12 +461,15 @@ def getSclusterVsVclusterTfidf(prefix, k):
 
     return apply(form.Form, components, {'js':js})()
 
-
-def getSclusterVsVcluster(prefix, k):
+#TODO: finish coding this
+def getMergeComparison(prefix):
     format_float = '%.5f'
 
-    f = open('data/%s/%s.out.clustering.%s.output' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.mat.clustering.%s.output' % (prefix, prefix, k), 'r')
+    from runcluster import filterWithI
+    results = filterWithI(prefix, k, 0, 'abstract.matrix')
+
+    f = open('data/%s/data.out.clustering.%s.output' % (prefix, k), 'r')
+    g = open('data/%s/data.abstract.matrix.clustering.%s.output' % (prefix, k), 'r')
 
     s_stats = f.read().split('\n')
     v_stats = g.read().split('\n')
@@ -466,8 +480,164 @@ def getSclusterVsVcluster(prefix, k):
     f.close()
     g.close()
 
-    f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.mat.clustering.%s' % (prefix, prefix, k), 'r')
+    f = open('data/%s/data.out.clustering.%s' % (prefix, k), 'r')
+    g = open('data/%s/data.abstract.matrix.clustering.%s' % (prefix, k), 'r')
+
+    clusters1 = f.read().split()
+    clusters2 = g.read().split()
+
+    total1 = [0] * (int(k))
+    total2 = [0] * (int(k))
+
+    for i in clusters1:
+        total1[int(i)] += 1
+
+    for i in clusters2:
+        total2[int(i)] += 1
+
+    total = results['total']
+
+    cov = [[0] * (int(k)) for i in range(int(k))]
+    for i, j in zip(clusters1, clusters2):
+        cov[int(i)][int(j)] += 1
+    
+    total_nodes = sum(total)
+
+    cov1 = []
+    for i in cov:
+        s = float(sum(i))
+        lst = []
+        for j in range(len(i)):
+            lst.append(i[j] / s)
+            i[j] /= s
+            i[j] -= (total[j]/float(total_nodes))
+        cov1.append(lst)
+
+    fractions = [j/float(total_nodes) for j in total]
+
+    print 'total', total
+    g0_similarities = map(lambda x: [x], total)
+    map(lambda x: x[0].extend(x[1]), 
+        zip(g0_similarities, 
+            results['g0-similarities']))
+    tmp = [(i, g0_similarities[i]) for i in range(len(g0_similarities))]
+    tmp = sorted(tmp, key=lambda x: -x[1][0])
+    g0_similarities = map(lambda x: x[1], tmp)
+    g0_v_category = map(lambda x: x[0], tmp)
+
+    for i in g0_similarities:
+        for j in range(2, len(i)):
+            sign = '-'
+            if i[j] > 0:
+                sign = '+'
+            i[j] = sign + format_float % i[j]
+
+    g0_category = list(category)
+    g0_category.pop(3)
+    g0_category.pop(4)
+    g0_category.pop(0)
+
+    print_cov = []
+    for i in cov:
+        lst = []
+        for j in i:
+            lst.append(format_float % j)
+        print_cov.append(lst)
+
+    components = [#form.Table('Ref stats', use_id=True, border="1", 
+                  #           cellspacing="0", cellpadding="3",
+                  #           h_category=range(int(k)),
+                  #           v_category=['in-stats', 'out-stats', 'total-nodes'],
+                  #           pairs=[results['in-stats'], results['out-stats'],
+                  #                  results['total']]),
+                  #form.tr(''),
+                  #form.tr(''),
+                  form.Table('SCluster Similarities', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3", 
+                             h_category=category, v_category=range(len(s_matches)),
+                             pairs=s_matches),
+                  form.tr(''),
+                  form.tr(''),
+                  form.Table('VCluster Similarities', use_id=True, 
+                             border="1", cellspacing="0", cellpadding="3",
+                             v_category=range(len(v_matches)),
+                             h_category=category, pairs = v_matches),
+                  form.tr(''),
+                  form.tr(''),
+                  form.Table('G0 Similarities', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3", 
+                             h_category=g0_category, v_category=g0_v_category,
+                             cross='cid', pairs=g0_similarities),
+                  form.tr(''),
+                  form.tr(''),
+                  form.Table('Total', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3",
+                             h_category=range(0, len(total)), pairs=[total]),
+                  form.tr(''),
+                  form.Table('Total1', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3",
+                             h_category=range(0, len(total1)), pairs=[total1]),
+                  form.tr(''),
+
+                  form.Table('Total2', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3",
+                             h_category=range(0, len(total2)), pairs=[total2]),
+                  form.tr(''),
+
+                  form.Table('fractions', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3",
+                             h_category=range(0, len(fractions)), pairs=[fractions]),
+                  form.tr(''),
+                  
+                  
+                  form.Table('Cov', use_id=True, border="1", 
+                             cellspacing="0", cellpadding="3",
+                             h_category=range(0, int(k)), pairs = print_cov),
+                  form.tr(''),
+                  #form.Table('Cov', use_id=True, border="1", 
+                  #           cellspacing="0", cellpadding="3",
+                  #           h_category=range(0, int(k)), pairs = cov1),
+                  #form.tr(''),
+
+                  ]
+
+    j = 0
+    for i in cov:
+        r = sorted(zip(i, range(0, int(k))), key=lambda x: -x[0])
+
+        pairs = map(lambda x: format_float % (x[0]), r)
+        cate = map(lambda x: str((x[1], format_float % fractions[x[1]])), r)
+        
+        components.append(form.Table('cov%d' % (j), border="1",
+                                     cellspacing="0", cellpadding="3",
+                                     h_category=cate, v_category=[j],
+                                     pairs=[pairs],
+                                     use_id=True))
+        j += 1
+        components.append(form.tr(''))
+    
+    variables = 'var link = "/van_graph?prefix1=%s&prefix2=%s&k=%s&l=0";\n' % (prefix, prefix, k)
+    js = form.js('script', variables + 'function create_graph(id) { window.open(link + "&cell=" + id + "@scluster@vcluster_tfidf");}\n')
+
+    return apply(form.Form, components, {'js':js})()
+
+def getSclusterVsVcluster(prefix, k):
+    format_float = '%.5f'
+
+    f = open('data/%s/data.out.clustering.%s.output' % (prefix, k), 'r')
+    g = open('data/%s/data.mat.clustering.%s.output' % (prefix, k), 'r')
+
+    s_stats = f.read().split('\n')
+    v_stats = g.read().split('\n')
+
+    (s_matches, category) = getMatches(s_stats)
+    (v_matches, _) = getMatches(v_stats)
+
+    f.close()
+    g.close()
+
+    f = open('data/%s/data.out.clustering.%s' % (prefix, k), 'r')
+    g = open('data/%s/data.mat.clustering.%s' % (prefix, k), 'r')
 
 
     clusters1 = f.read().split()
@@ -556,9 +726,9 @@ def getDegreeComparison(prefix1, prefix2, k, l):
     NUMBERS = '[\d]+'
     SIM = '[+-\.\d]+'
 
-    f = open('data/%s/%s.out.clustering.%s.output' % 
-             (prefix2, prefix2, k), 'r')
-    g = open('data/%s/%s.out.clustering.%s' % (prefix2, prefix2, k), 'r')
+    f = open('data/%s/data.out.clustering.%s.output' % 
+             (prefix2, k), 'r')
+    g = open('data/%s/data.out.clustering.%s' % (prefix2, k), 'r')
 
     clusters1 = results['new_clusters']
     clusters2 = g.read().split()
@@ -670,13 +840,13 @@ def getDegreeComparison(prefix1, prefix2, k, l):
 
 def getClusterAndIndex(prefix, k, tag):
     if tag == 'scluster':
-        f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, k), 'r')
+        f = open('data/%s/data.out.clustering.%s' % (prefix, k), 'r')
     elif tag == 'vcluster':
-        f = open('data/%s/%s.mat.clustering.%s' % (prefix, prefix, k), 'r')
+        f = open('data/%s/data.mat.clustering.%s' % (prefix, k), 'r')
     else:
         print prefix, k, tag
-        f = open('data/%s/%s.abstract.matrix.clustering.%s' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.index' % (prefix, prefix), 'r')
+        f = open('data/%s/data.abstract.matrix.clustering.%s' % (prefix, k), 'r')
+    g = open('data/%s/data.index' % (prefix), 'r')
 
     clusters = f.read().split()
     indices = g.read().split()

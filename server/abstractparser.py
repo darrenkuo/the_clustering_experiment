@@ -161,6 +161,7 @@ def next_paper(f, keywords):
 #TODO: make new prefix directory
 
 def merge_files(output_dir, prefixes, new_prefix):
+    
     pm = {}
     indexer = Indexer()
     new_prefix_dir = join(output_dir, new_prefix)
@@ -168,21 +169,23 @@ def merge_files(output_dir, prefixes, new_prefix):
         mkdir(new_prefix_dir)
     except:
         print "new prefix directory already created"
-
+    
     f = open(join(output_dir, 'data.serialize'), 'r')
     descriptions = eval(f.read())
     f.close()
 
     keyword_set = set()
     min_degree = 1e300
-        
-    for p in prefixes:
+
+    cluster_map = {}
+    for c, p in enumerate(prefixes):
         cur_dir = join(output_dir, p)
-        f = open(join(cur_dir, '%s.index' % (p)), 'r')
+        f = open(join(cur_dir, 'data.index'), 'r')
         indices = f.read().split()
         f.close()
 
         for i in indices:
+            cluster_map[i] = c
             f = open(join(cur_dir, join('serialized', '%s.serialize' % (i))), 'r')
             pm[i] = eval(f.read())
             f.close()
@@ -207,6 +210,11 @@ def merge_files(output_dir, prefixes, new_prefix):
     for i in pm:
         pm[i]['REF'] = pm[i]['IN-REF'].union(pm[i]['OUT-REF'])
 
+    f = open(join(new_prefix_dir, 'merge.clusters'), 'w')
+    for r in indexer.reals:
+        f.write(str(cluster_map[r]) + '\n')
+    f.close()
+
     output_description(list(keyword_set), min_degree, new_prefix_dir, new_prefix)
     build_htmls_serializes(new_prefix_dir, new_prefix, pm)
     build_outputs(new_prefix_dir, new_prefix, pm, indexer)
@@ -230,7 +238,7 @@ def bidirectional(pm):
         map(lambda r: pm[r]['REF'].add(index), pm[index]['REF'])
 
 def build_abstract_count(output_directory, prefix, pm):
-    f = open(join(output_directory, '%s.abstract.count' % (prefix)), 'w')
+    f = open(join(output_directory, 'data.abstract.count'), 'w')
     indexer = Indexer()
     
     for i in pm:
@@ -246,17 +254,17 @@ def build_abstract_count(output_directory, prefix, pm):
         f.write('\n')
     f.close()        
 
-    f = open(join(output_directory, '%s.abstract.count.clabel' % (prefix)), 'w')
+    f = open(join(output_directory, 'data.abstract.count.clabel'), 'w')
     for i in indexer.reals:
         f.write('%s\n' % (i))
     f.close()        
 
 def build_outputs(output_directory, prefix, pm, indexer):
     
-    f = open(join(output_directory, "%s.out" % (prefix)), 'w')
-    g = open(join(output_directory, "%s.index" % (prefix)), 'w')
-    a = open(join(output_directory, "%s.abstract" % (prefix)), 'w')
-    b = open(join(output_directory, "%s.mat" % (prefix)), 'w')
+    f = open(join(output_directory, "data.out"), 'w')
+    g = open(join(output_directory, "data.index"), 'w')
+    a = open(join(output_directory, "data.abstract"), 'w')
+    b = open(join(output_directory, "data.mat"), 'w')
 
     build_abstract_count(output_directory, prefix, pm)
 
@@ -295,7 +303,7 @@ def build_outputs(output_directory, prefix, pm, indexer):
 def create_outputs1(main_prefix, data_dir, new_prefix, minimum):
     print "TH:" , minimum
     output_dir = join(data_dir, new_prefix)
-    f = open(join(data_dir, main_prefix, '%s.index' % (main_prefix)), 'r')
+    f = open(join(data_dir, main_prefix, 'data.index'), 'r')
     indices = f.read().split()
     f.close()
 
@@ -349,16 +357,16 @@ def create_outputs1(main_prefix, data_dir, new_prefix, minimum):
 
     #TODO: please fix this shit....
     tf = TemporaryFile()
-    proc = Popen(['lib/doc2mat-1.0/doc2mat', 'data/%s/%s.abstract' % (new_prefix, new_prefix), 
-                  'data/%s/%s.abstract.matrix' % (new_prefix, new_prefix)], stdout=tf)
-    print ' '.join(['lib/doc2mat-1.0/doc2mat', 'data/%s/%s.abstract' % (new_prefix, new_prefix), 
-                    'data/%s/%s.abstract.matrix' % (new_prefix, new_prefix)])
+    proc = Popen(['lib/doc2mat-1.0/doc2mat', 'data/%s/data.abstract' % (new_prefix), 
+                  'data/%s/data.abstract.matrix' % (new_prefix)], stdout=tf)
+    print ' '.join(['lib/doc2mat-1.0/doc2mat', 'data/%s/data.abstract' % (new_prefix), 
+                    'data/%s/data.abstract.matrix' % (new_prefix)])
     o = proc.communicate()
     retcode = proc.wait()
     tf.close()
 
-    f = open('data/%s/%s.abstract.matrix' % (new_prefix, new_prefix), 'r')
-    g = open('data/%s/%s.abstract.matrix.ldain' % (new_prefix, new_prefix), 'w')
+    f = open('data/%s/data.abstract.matrix' % (new_prefix), 'r')
+    g = open('data/%s/data.abstract.matrix.ldain' % (new_prefix), 'w')
     proc = Popen(['lib/doc2mat-1.0/matToLdaIn.py'], stdin=f, stdout=g)
     proc.communicate()
     retcode = proc.wait()
@@ -428,13 +436,13 @@ def create_outputs(main_filename, keywords, data_dir, prefix):
     build_htmls_serializes(output_dir, prefix, pm)
     build_outputs(output_dir, prefix, pm, indexer)
 
-    proc = Popen(['lib/doc2mat-1.0/doc2mat', 'data/%s/%s.abstract' % (prefix, prefix), 
-                  'data/%s/%s.abstract.matrix' % (prefix, prefix)], stdout=PIPE)
+    proc = Popen(['lib/doc2mat-1.0/doc2mat', 'data/%s/data.abstract' % (prefix), 
+                  'data/%s/data.abstract.matrix' % (prefix)], stdout=PIPE)
     proc.communicate()
     retcode = proc.wait()
 
-    f = open('data/%s/%s.abstract.matrix' % (prefix, prefix), 'r')
-    g = open('data/%s/%s.abstract.matrix.ldain' % (prefix, prefix), 'w')
+    f = open('data/%s/data.abstract.matrix' % (prefix), 'r')
+    g = open('data/%s/data.abstract.matrix.ldain' % (prefix), 'w')
     proc = Popen(['lib/doc2mat-1.0/matToLdaIn.py'], stdin=f, stdout=g)
     proc.communicate()
     retcode = proc.wait()

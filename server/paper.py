@@ -1,3 +1,4 @@
+from re import search
 
 fields = ['AUTHOR', 'YEAR', 'CONF', 'INDEX', 'CITATION', 'ARNETID', 'ABSTRACT']
 row = '<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n</tr>\n'
@@ -30,14 +31,33 @@ def build_scluster_html(f, pm, indexToCluster):
 
 build_vcluster_html = build_scluster_html
     
-def build_lda_html(f, pm):
+def build_lda_html(f, pm, lst):
     global fields, row, in_link, out_link
 
     f.write('<h4><a name="%s">Information about %s</a></h4>\n' % (str(pm['INDEX']), pm['PAPERTITLE']))
     f.write('<table border="0">\n')
 
-    [f.write(row % (field, pm[field])) for field in fields]
+    for field in fields:
+        f.write(row % (field, highlight(pm[field], lst)))
+
     f.write(row % ('TOPIC SCORE', pm['TOPIC SCORE']))   
     
     f.write("</table>\n<hr>\n")
 
+matches = 0
+def highlight(txt, lst):
+    global matches
+    result = ''
+    for w in txt.split():
+        if matchWords(w, lst):
+            matches += 1
+            result += '<font color=red>%s</font> ' % (w)
+        else:
+            result += '%s ' % (w)
+    return result
+
+def matchWords(w, lst):
+    for i in lst:
+        if search(i ,w.lower()):
+            return True
+    return False

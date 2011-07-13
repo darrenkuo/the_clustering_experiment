@@ -32,7 +32,7 @@ def filterCommonWords(lst):
 def generateLdaK(k, prefix, research_path, html_path, data_module, minimum, clabel_file):
     serialized_path = join(research_path, 'data', prefix, 'serialized')
     f = open(join(html_path, 'final.gamma'), 'r')
-    g = open(join(research_path, join('data', join(prefix, '%s.index' % (prefix)))), 'r')
+    g = open(join(research_path, join('data', join(prefix, 'data.index'))), 'r')
 
     lst = map(lambda x: normalize(x, 1), 
               map(lambda x: 
@@ -46,9 +46,9 @@ def generateLdaK(k, prefix, research_path, html_path, data_module, minimum, clab
     m = dict([(i, j) for i, j in zip(lst1, lst)])
     n = {}
 
-    #f = open(join(research_path, 'data', prefix, '%s.abstract.matrix.clabel' % (prefix)), 'r')
-    #f = open(join(research_path, 'data', prefix, '%s.abstract.count.clabel' % (prefix)), 'r')
-    f = open(join(research_path, 'data', prefix, '%s.%s' % (prefix, clabel_file)), 'r')
+    #f = open(join(research_path, 'data', prefix, 'data.abstract.matrix.clabel'), 'r')
+    #f = open(join(research_path, 'data', prefix, 'data.abstract.count.clabel'), 'r')
+    f = open(join(research_path, 'data', prefix, 'data.%s' % (clabel_file)), 'r')
     words = f.read().strip().split()
     f.close()
 
@@ -83,7 +83,7 @@ def generateLdaK(k, prefix, research_path, html_path, data_module, minimum, clab
                    filter(lambda x: search('%s-results-[0-9]+' % (prefix), x),  
                           walk('scluster').next()[1]))
     for c in clusters:
-        f = open(join(research_path, 'data/%s/%s.out.clustering.%s' % (prefix, prefix, c)), 'r')
+        f = open(join(research_path, 'data/%s/data.out.clustering.%s' % (prefix, c)), 'r')
         cluster_groups = map(int, f.read().split())
         f.close()
         info = {'lda': k}
@@ -138,12 +138,12 @@ def generateClusterK(k, prefix, research_path, html_path, data_module, minimum, 
     setNeighbors = data_module.setNeighbors
 
     if prog == 'scluster':
-        f = open(join(research_path, 'data/%s/%s.out.clustering.%d' % (prefix, prefix, k)), 'r')
+        f = open(join(research_path, 'data/%s/data.out.clustering.%d' % (prefix, k)), 'r')
     elif prog == 'vcluster':
-        f = open(join(research_path, 'data/%s/%s.mat.clustering.%d' % (prefix, prefix, k)), 'r')
+        f = open(join(research_path, 'data/%s/data.mat.clustering.%d' % (prefix, k)), 'r')
     else:
-        f = open(join(research_path, 'data/%s/%s.abstract.matrix.clustering.%d' % (prefix, prefix, k)), 'r')
-    g = open(join(research_path, 'data/%s/%s.index' % (prefix, prefix)), 'r')
+        f = open(join(research_path, 'data/%s/data.abstract.matrix.clustering.%d' % (prefix, k)), 'r')
+    g = open(join(research_path, 'data/%s/data.index' % (prefix)), 'r')
 
     m = dict([(i,[]) for i in range(k)])
     if prog == 'vcluster' or prog == 'vcluster_tfidf':
@@ -234,13 +234,13 @@ def generateClusterK(k, prefix, research_path, html_path, data_module, minimum, 
 
 def scluster(k, prefix, research_path, html_path, data_module, minimum):
 
-    f = open(join(research_path, 'data', prefix, '%s.out.clustering.%d.output' % (prefix, k)), 'w')
+    f = open(join(research_path, 'data', prefix, 'data.out.clustering.%d.output' % (k)), 'w')
 
     proc = Popen([join(research_path, 'lib/cluto-2.1.1/Linux/scluster'), 
-                  join(research_path, 'data', prefix, '%s.out' % (prefix)),
+                  join(research_path, 'data', prefix, 'data.out'),
                   str(k)], stdout = f)
     print ' '.join([join(research_path, 'lib/cluto-2.1.1/Linux/scluster'), 
-                  join(research_path, 'data', prefix, '%s.out' % (prefix)),
+                  join(research_path, 'data', prefix, 'data.out'),
                   str(k)])
     proc.communicate()
     print 'retcode:', proc.wait()
@@ -251,9 +251,9 @@ def scluster(k, prefix, research_path, html_path, data_module, minimum):
 
 '''
 def getSVSimiliar(prefix, k):
-    f = open('data/%s/%s.out.clustering.%s' % (prefix, prefix, k), 'r')
-    g = open('data/%s/%s.mat.clustering.%s' % (prefix, prefix, k), 'r')
-    h = open('data/%s/%s.index' % (prefix, prefix), 'r')
+    f = open('data/%s/data.out.clustering.%s' % (prefix, k), 'r')
+    g = open('data/%s/data.mat.clustering.%s' % (prefix, k), 'r')
+    h = open('data/%s/data.index' % (prefix), 'r')
 
     scluster = f.read().split()
     vcluster = g.read().split()
@@ -307,8 +307,8 @@ def getSVSimiliar(prefix, k):
 '''
 
 def filterWithI(prefix1, k, l, infix):
-    f = open('data/%s/%s.%s.clustering.%s' % (prefix1, prefix1, infix, k), 'r')
-    g = open('data/%s/%s.index' % (prefix1, prefix1), 'r')
+    f = open('data/%s/data.%s.clustering.%s' % (prefix1, infix, k), 'r')
+    g = open('data/%s/data.index' % (prefix1), 'r')
 
     clusters = f.read().split()
     indices = g.read().split()
@@ -371,13 +371,13 @@ def lda_word_count(k, prefix, research_path, html_path, paper, minimum):
 
 # TODO: fix global variables
 def lda(k, prefix, research_path, html_path, paper, minimum, lda_input, clabel_input):
-    f = open(join(research_path, 'data/%s/%s.out.lda.%d.output' % (prefix, prefix, k)), 'w')
+    f = open(join(research_path, 'data/%s/data.out.lda.%d.output' % (prefix, k)), 'w')
     command = [join(research_path, 'lib/lda-c-dist/lda'),
                'est', str(1), str(k), 
                join(research_path, 'lib/lda-c-dist/settings.txt'),
                #join(research_path, 'data/%s/%s.abstract.matrix' % (prefix, prefix)),
                #join(research_path, 'data/%s/%s.abstract.count' % (prefix, prefix)),
-               join(research_path, 'data/%s/%s.%s' % (prefix, prefix, lda_input)),
+               join(research_path, 'data/%s/data.%s' % (prefix, lda_input)),
                'random', html_path]#'lda/%s/results-%s' % (prefix, k)]
     print ' '.join(command)
     proc = Popen(command, stdout=f)
@@ -391,10 +391,10 @@ def lda(k, prefix, research_path, html_path, paper, minimum, lda_input, clabel_i
         generateLdaK(k, prefix, research_path, html_path, paper, minimum, clabel_input)
 
 def vcluster(k, prefix, research_path, html_path, paper, minimum):
-    f = open(join(research_path, 'data/%s/%s.mat.clustering.%d.output' %
-                  (prefix, prefix, k)), 'w')
+    f = open(join(research_path, 'data/%s/data.mat.clustering.%d.output' %
+                  (prefix, k)), 'w')
     proc = Popen([join(research_path, 'lib/cluto-2.1.1/Linux/vcluster'),
-                  join(research_path, 'data/%s/%s.mat' % (prefix, prefix)), str(k)], stdout = f)
+                  join(research_path, 'data/%s/data.mat' % (prefix)), str(k)], stdout = f)
     proc.communicate()
     proc.wait()
     f.close()
@@ -403,10 +403,10 @@ def vcluster(k, prefix, research_path, html_path, paper, minimum):
         generateClusterK(k, prefix, research_path, html_path, paper, minimum, 'vcluster')
 
 def vcluster_tfidf(k, prefix, research_path, html_path, paper, minimum):
-    f = open(join(research_path, 'data/%s/%s.abstract.matrix.clustering.%d.output' %
-                  (prefix, prefix, k)), 'w')
+    f = open(join(research_path, 'data/%s/data.abstract.matrix.clustering.%d.output' %
+                  (prefix, k)), 'w')
     proc = Popen([join(research_path, 'lib/cluto-2.1.1/Linux/vcluster'),
-                  join(research_path, 'data/%s/%s.abstract.matrix' % (prefix, prefix)), str(k)], stdout = PIPE)
+                  join(research_path, 'data/%s/data.abstract.matrix' % (prefix)), str(k)], stdout = PIPE)
     (o, e) = proc.communicate()
     f.write(o)
     proc.wait()

@@ -28,6 +28,7 @@ web.config.debug = True
 
 urls = ('/', 'main', 
         '/scluster', 'scluster', 
+        '/vcluster', 'vcluster',
         '/lda_tfidf', 'lda_tfidf', 
         '/lda_word_count', 'lda_word_count',
         '/scluster_results', 'scluster_results',
@@ -36,13 +37,15 @@ urls = ('/', 'main',
         '/lda_scluster', 'lda_scluster',
         '/van_graph', 'van_graph',
         '/scluster_vs_vcluster', 'scluster_vs_vcluster',
-        '/scluster_vs_vcluster_tfidf', 'scluster_vs_vcluster_tfidf')
+        '/scluster_vs_vcluster_tfidf', 'scluster_vs_vcluster_tfidf',
+        '/merge_comparison', 'merge_comparison')
 
 class main:
     def GET(self):
         return render.main(getDatasetForm(), getJobInputForm(), 
                            getHighDegreeTestForm(), getLdaSclusterForm(),
-                           getSclusterVsVclusterForm(), getSclusterVsVclusterTfidfForm())
+                           getSclusterVsVclusterForm(), getSclusterVsVclusterTfidfForm(),
+                           getMergeComparisonForm())
 
     def POST(self):
         dataset_form_ = getDatasetForm()
@@ -51,6 +54,7 @@ class main:
         lda_scluster_form_ = getLdaSclusterForm()
         scluster_vs_vcluster_form_ = getSclusterVsVclusterForm()
         scluster_vs_vcluster_tfidf_form_ = getSclusterVsVclusterTfidfForm()
+        merge_comparison_form_ = getMergeComparisonForm()
 
         if dataset_form_.validates():
             handle_dataset_form(dataset_form_)
@@ -75,9 +79,14 @@ class main:
             scluster_vs_vcluster_tfidf_form_[sv_tfidf_button_txt].value == 'submit!'):
             handle_scluster_vs_vcluster_tfidf_form(scluster_vs_vcluster_tfidf_form_)
 
+        if (merge_comparison_form_.validates() and
+            merge_comparison_form_[merge_comparison_button_txt].value == 'submit!'):
+            handle_merge_comparison_form(merge_comparison_form_)
+
         return render.main(getDatasetForm(), getJobInputForm(), 
                            getHighDegreeTestForm(), getLdaSclusterForm(),
-                           getSclusterVsVclusterForm(), getSclusterVsVclusterTfidfForm())
+                           getSclusterVsVclusterForm(), getSclusterVsVclusterTfidfForm(),
+                           getMergeComparisonForm())
 
 class lda_scluster:
     def GET(self):
@@ -95,6 +104,13 @@ class scluster:
 
     def POST(self):
         return render.scluster(getSclusterForm())
+
+class vcluster:
+    def GET(self):
+        return render.vcluster(getVclusterForm())
+
+    def POST(self):
+        return self.GET(self)
 
 class lda_tfidf:
     def GET(self):
@@ -161,6 +177,14 @@ class degree_compare:
         t = getDegreeComparison(user_data.prefix1, user_data.prefix2,
                                 int(user_data.k), int(user_data.l))
         return render.degree_compare(t)
+
+class merge_comparison:
+    def GET(self):
+        user_data = web.input()
+        t = getMergeComparison(user_data.prefix)
+        return render.merge_comparison(t)
+    def POST(self):
+        return self.GET()
 
 class scluster_vs_vcluster:
     def GET(self):
